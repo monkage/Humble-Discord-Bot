@@ -9,9 +9,10 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 
 
 def get_meme():
-    response = requests.get('https://meme-api.com/gimme')
-    json_data = json.loads(response.text)
-    return json_data['url']
+    r = requests.get("https://meme-api.com/gimme", timeout=10)
+    j = r.json()
+    # returns: title, image url (direct), and the source Reddit post
+    return j["title"], j["url"], j.get("postLink")
 
 class MyClient(discord.Client):
     async def on_ready(self):
@@ -22,7 +23,17 @@ class MyClient(discord.Client):
             return
         
         if message.content.startswith('$meme'):
-            await message.channel.send(get_meme())
+            title, image_url, source = get_meme()
+
+            embed = discord.Embed(
+                title=title,       # the meme’s title (clickable because we set url=…)
+                url=source,        # clicking the title opens the Reddit post
+                color=0x2F3136     # optional accent color
+            )
+            embed.set_image(url=image_url)               # show the meme image
+            embed.set_footer(text="Powered by meme-api") # optional footer
+
+            await message.channel.send(embed=embed)
 
         
 

@@ -1,44 +1,26 @@
+"""Entry point: `python bot.py`"""
 import discord
-import requests
-import json
-import os, discord, requests, json
-from dotenv import load_dotenv
 
-load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
+from mybot import config
+from mybot.client import MyClient
+from mybot.commands import register_all
 
 
-def get_meme():
-    r = requests.get("https://meme-api.com/gimme", timeout=10)
-    j = r.json()
-    # returns: title, image url (direct), and the source Reddit post
-    return j["title"], j["url"], j.get("postLink")
+def main() -> None:
+    if not config.DISCORD_TOKEN:
+        raise RuntimeError("DISCORD_TOKEN is missing from your .env")
 
-class MyClient(discord.Client):
-    async def on_ready(self):
-        print('Logged on as {0}!'.format(self.user))
-    
-    async def on_message(self, message):
-        if message.author == self.user:
-            return
-        
-        if message.content.startswith('$meme'):
-            title, image_url, source = get_meme()
+    #this gives access to all the standard non privileged intents on,
+    # with the privileged ones off(stuff luke presences, members and message_content)
+    intents = discord.Intents.default()
+    #making your bot and handing it a list of things it wants to hear about from discord
+    client = MyClient(intents=intents)
 
-            embed = discord.Embed(
-                title=title,       # the meme’s title (clickable because we set url=…)
-                url=source,        # clicking the title opens the Reddit post
-                color=0x2F3136     # optional accent color
-            )
-            embed.set_image(url=image_url)               # show the meme image
-            embed.set_footer(text="Powered by meme-api") # optional footer
+    #attach every slash/context menu command to the tree before logging in
+    register_all(client.tree)
 
-            await message.channel.send(embed=embed)
+    client.run(config.DISCORD_TOKEN)
 
-        
 
-intents = discord.Intents.default()
-intents.message_content = True
-
-client = MyClient(intents=intents)
-client.run(TOKEN)
+if __name__ == "__main__":
+    main()
